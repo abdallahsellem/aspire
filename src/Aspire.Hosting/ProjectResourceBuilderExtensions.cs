@@ -374,6 +374,12 @@ public static class ProjectResourceBuilderExtensions
                               .WithDebugSupport(mode => new ProjectLaunchConfiguration { ProjectPath = projectMetadata.ProjectPath, Mode = mode }, "project")
                               .WithProjectDefaults(options);
 
+        // Add required command validation for file-based apps (.cs files)
+        if (((IProjectMetadata)projectMetadata).IsFileBasedApp)
+        {
+            resource.WithRequiredCommand("dotnet", DotnetSdkValidators.CreateDotnet10ValidationCallback(Path.GetDirectoryName(projectMetadata.ProjectPath)));
+        }
+
         resource.OnBeforeResourceStarted(async (r, e, ct) =>
         {
             var projectPath = projectMetadata.ProjectPath;
@@ -386,18 +392,6 @@ public static class ProjectResourceBuilderExtensions
                     ? $"Path to C# project could not be determined. The directory '{projectPath}' must contain a single .csproj file."
                     : $"The C# app path '{projectPath}' is invalid. The path must be to a .cs file, .csproj file, or directory containing a single .csproj file.";
                 throw new DistributedApplicationException(message);
-            }
-
-            // Validate .NET version
-            if (((IProjectMetadata)projectMetadata).IsFileBasedApp
-                && await DotnetSdkUtils.TryGetVersionAsync(Path.GetDirectoryName(projectPath)).ConfigureAwait(false) is { } version
-                && version.Major < 10)
-            {
-                // File-based apps are only supported on .NET 10 or later
-                var versionValue = version is not null
-                    ? $"is {version}"
-                    : "could not be determined";
-                throw new DistributedApplicationException($"File-based apps are only supported on .NET 10 or later. The version active in '{Path.GetDirectoryName(projectPath)}' {versionValue}.");
             }
         });
 

@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using Aspire.Dashboard.Model;
 using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.DependencyInjection;
-using Aspire.Hosting.Utils;
 
 namespace Aspire.Hosting;
 
@@ -47,6 +46,7 @@ public static class DotnetToolResourceExtensions
             .WithIconName("Toolbox")
             .WithCommand("dotnet")
             .WithArgs(BuildToolExecArguments)
+            .WithRequiredCommand("dotnet", DotnetSdkValidators.CreateDotnet10ValidationCallback(Directory.GetCurrentDirectory()))
             .OnBeforeResourceStarted(BeforeResourceStarted);
 
         void BuildToolExecArguments(CommandLineArgsCallbackContext x)
@@ -107,9 +107,6 @@ public static class DotnetToolResourceExtensions
                     new (KnownProperties.Resource.Source, resource.ToolConfiguration?.PackageId)
                     ])
             }).ConfigureAwait(false);
-
-            var version = await DotnetSdkUtils.TryGetVersionAsync(resource.WorkingDirectory).ConfigureAwait(false);
-            ValidateDotnetSdkVersion(version, resource.WorkingDirectory);
         }
 
     }
